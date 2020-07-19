@@ -1,12 +1,11 @@
 import logging
-import sys
 import os
 
 import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk
-
 from widgets.main_window import MainWindow
+
 
 levelName = os.getenv('LOG_LEVEL', 'INFO')
 level = logging.getLevelName(levelName)
@@ -14,7 +13,7 @@ level = logging.getLevelName(levelName)
 logging.basicConfig(
     format='%(asctime)s - %(module)s - [%(levelname)s] %(message)s',
     datefmt='%m/%d/%Y %I:%M:%S %p',
-    level = level)
+    level=level)
 
 log = logging.getLogger(__name__)
 
@@ -31,14 +30,7 @@ if __name__ == '__main__':
         Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
     win = MainWindow()
-
-    def close(*args):
-        log.info('Exiting...')
-        sys.exit(0)
-
-    win.connect('delete-event', close)
-
-    win.show()
-
+    win.connect("destroy", Gtk.main_quit)
+    win.show_all()
     log.info('Starting application.')
     Gtk.main()

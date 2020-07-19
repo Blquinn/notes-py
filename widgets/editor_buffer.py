@@ -30,7 +30,6 @@ class UndoableDelete:
 
     def __init__(self, text_buffer: Gtk.TextBuffer, start_iter: Gtk.TextIter, end_iter: Gtk.TextIter):
         self.text = text_buffer.get_text(start_iter, end_iter, True)
-        # self.text = text_buffer.get_mark()
         self.start = start_iter.get_offset()
         self.end = end_iter.get_offset()
         # need to find out if backspace or delete key has been used
@@ -194,7 +193,7 @@ class UndoableBuffer(Gtk.TextBuffer):
             self.place_cursor(start)
         elif isinstance(undo_action, UndoableDelete):
             start = self.get_iter_at_offset(undo_action.start)
-            self.insert_markup(start, undo_action.text, True)
+            self.insert(start, undo_action.text)
             stop = self.get_iter_at_offset(undo_action.end)
             if undo_action.delete_key_used:
                 self.place_cursor(start)
@@ -215,7 +214,7 @@ class UndoableBuffer(Gtk.TextBuffer):
         self.undo_stack.append(redo_action)
         if isinstance(redo_action, UndoableInsert):
             start = self.get_iter_at_offset(redo_action.offset)
-            self.insert_markup(start, redo_action.text, True)
+            self.insert(start, redo_action.text)
             new_cursor_pos = self.get_iter_at_offset(
                 redo_action.offset + redo_action.length
             )
