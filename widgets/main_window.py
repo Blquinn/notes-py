@@ -94,21 +94,30 @@ class MainWindow(Gtk.ApplicationWindow):
         def header_func(row: Gtk.ListBoxRow, before: Union[Gtk.ListBoxRow, None], user_data):
             note: Note = self.notes_model[row.get_index()]
 
-            def create_label(text: str):
+            def create_header(text: str):
+                box = Gtk.VBox()
+                box.set_margin_top(10)
+
                 lbl = Gtk.Label(label=text)
                 lbl.set_halign(Gtk.Align.START)
-                return lbl
+                box.add(lbl)
+
+                sep = Gtk.Separator()
+                box.add(sep)
+                box.show_all()
+
+                return box
 
             if not before:
                 if note.pinned:
-                    row.set_header(create_label('Pinned'))
+                    row.set_header(create_header('Pinned'))
                 else:
-                    row.set_header(create_label('Other Notes'))
+                    row.set_header(create_header('Other Notes'))
                 return
 
             before_note: Note = self.notes_model[before.get_index()]
             if before_note.pinned and not note.pinned:
-                row.set_header(create_label('Other Notes'))
+                row.set_header(create_header('Other Notes'))
 
         self.notes_listbox.set_header_func(header_func, None)
 
@@ -128,7 +137,6 @@ class MainWindow(Gtk.ApplicationWindow):
 
     def _create_sidebar_note_widget(self, item: GObject.Object):
         widget = Gtk.VBox()
-        widget.set_size_request(-1, 80)
 
         top = Gtk.HBox()
         title_lbl = Gtk.Label(label='Jobs to do')
@@ -159,5 +167,7 @@ class MainWindow(Gtk.ApplicationWindow):
 
         widget.add(bottom)
         widget.set_child_packing(bottom, False, False, 10, Gtk.PackType.START)
+
+        widget.add(Gtk.Separator())
 
         return widget
