@@ -32,15 +32,7 @@ notes = [
     Note('Gift Ideas', 'The most effective way to destroy people is to deny an obliterate their psyche.', pinned=True),
     Note('Pluto', 'The most effective way to destroy people is to deny an obliterate their psyche.', pinned=False),
     Note('Something else', 'The most effective way to destroy people is to deny an obliterate their psyche.', pinned=False),
-
-    # Note('Jobs to do', 'The most effective way to destroy people is to deny an obliterate their psyche.', pinned=True),
-    # Note('Gift Ideas', 'The most effective way to destroy people is to deny an obliterate their psyche.', pinned=True),
-    # Note('Pluto', 'The most effective way to destroy people is to deny an obliterate their psyche.', pinned=False),
-    # Note('Something else', 'The most effective way to destroy people is to deny an obliterate their psyche.', pinned=False),
 ]
-# notes = [
-#     Note(),
-# ]
 
 
 @Gtk.Template.from_file('ui/MainWindow.ui')
@@ -55,15 +47,12 @@ class MainWindow(Gtk.ApplicationWindow):
     note_selection_box: Gtk.Box = Gtk.Template.Child()
     note_selection_button: Gtk.MenuButton = Gtk.Template.Child()
     note_selection_button_label: Gtk.Label = Gtk.Template.Child()
-    pinned_notes_list: Gtk.ListBox = Gtk.Template.Child()
-    other_notes_list: Gtk.ListBox = Gtk.Template.Child()
-    # note_viewport: Gtk.Viewport = Gtk.Template.Child()
+    notes_listbox: Gtk.ListBox = Gtk.Template.Child()
 
     def __init__(self):
         super(MainWindow, self).__init__()
 
         self.editor = RichEditor()
-        # self.editor.show()
         self.editor.set_margin_top(10)
         self.editor.set_margin_start(30)
         self.editor.set_margin_end(30)
@@ -100,29 +89,28 @@ class MainWindow(Gtk.ApplicationWindow):
         self.note_selection_button.set_popover(self.notebook_selection_popover)
 
         self.notes_model: Gio.ListStore = Gio.ListStore().new(Note)
-        self.pinned_notes_list.bind_model(self.notes_model, self._create_sidebar_note_widget)
-        self.other_notes_list.bind_model(self.notes_model, self._create_sidebar_note_widget)
-        
+        self.notes_listbox.bind_model(self.notes_model, self._create_sidebar_note_widget)
+
         def header_func(row: Gtk.ListBoxRow, before: Union[Gtk.ListBoxRow, None], user_data):
-            print(row)
-            pass
+            note: Note = self.notes_model[row.get_index()]
 
-        self.other_notes_list.set_header_func(header_func, None)
-        self.pinned_notes_list.set_header_func(header_func, None)
+            def create_label(text: str):
+                lbl = Gtk.Label(label=text)
+                lbl.set_halign(Gtk.Align.START)
+                return lbl
 
-        def filter_pinned(row: Gtk.ListBoxRow, user_data) -> bool:
-            print(row.get_index(), user_data)
-            return True
+            if not before:
+                if note.pinned:
+                    row.set_header(create_label('Pinned'))
+                else:
+                    row.set_header(create_label('Other Notes'))
+                return
 
-        def filter_not_pinned(row: Gtk.ListBoxRow, user_data) -> bool:
-            print(row.get_index())
-            # print(row.path())
-            # row.
-            # self.notes_model.get
-            return False
+            before_note: Note = self.notes_model[before.get_index()]
+            if before_note.pinned and not note.pinned:
+                row.set_header(create_label('Other Notes'))
 
-        self.pinned_notes_list.set_filter_func(filter_pinned, None)
-        self.other_notes_list.set_filter_func(filter_not_pinned, None)
+        self.notes_listbox.set_header_func(header_func, None)
 
         for note in notes:
             self.notes_model.append(note)
@@ -138,40 +126,38 @@ class MainWindow(Gtk.ApplicationWindow):
         diag = EditNotebooksDialog()
         diag.show()
 
-    # def _populate_notes_list(self):
     def _create_sidebar_note_widget(self, item: GObject.Object):
         widget = Gtk.VBox()
         widget.set_size_request(-1, 80)
-        widget.set_vexpand(True)
 
         top = Gtk.HBox()
         title_lbl = Gtk.Label(label='Jobs to do')
         title_lbl.set_ellipsize(Pango.EllipsizeMode.END)
         top.add(title_lbl)
-        top.set_child_packing(title_lbl, False, True, 10, Gtk.PackType.START)
+        top.set_child_packing(title_lbl, False, False, 10, Gtk.PackType.START)
 
         spacer = Gtk.Box()
         spacer.set_hexpand(True)
         top.add(spacer)
+
         time_lbl = Gtk.Label(label='12:22')
         time_lbl.set_ellipsize(Pango.EllipsizeMode.END)
         top.add(time_lbl)
-        top.set_child_packing(time_lbl, False, True, 10, Gtk.PackType.END)
+        top.set_child_packing(time_lbl, False, False, 10, Gtk.PackType.END)
 
         widget.add(top)
-        # widget.set_child_packing(top, True, True, 0, Gtk.PackType.START)
+        widget.set_child_packing(top, False, False, 0, Gtk.PackType.START)
 
         bottom = Gtk.Label(label='The most effective way to destroy people is to deny an obliterate their psyche.')
-        # bottom.set_vexpand(True)
         bottom.set_ellipsize(Pango.EllipsizeMode.END)
         bottom.set_lines(2)
         bottom.set_line_wrap(True)
-        # bottom.set_line_wrap_mode(Pango.WrapMode.CHAR)
         bottom.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR)
         bottom.set_alignment(0.0, 0.5)
         bottom.set_margin_start(10)
         bottom.set_margin_end(10)
 
         widget.add(bottom)
-        widget.set_child_packing(bottom, False, True, 10, Gtk.PackType.START)
+        widget.set_child_packing(bottom, False, False, 10, Gtk.PackType.START)
+
         return widget
