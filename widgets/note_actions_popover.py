@@ -2,6 +2,8 @@ import logging
 
 from gi.repository import Gtk
 
+from widgets.models import Note
+
 log = logging.getLogger(__name__)
 
 
@@ -11,8 +13,12 @@ class NoteActionsPopover(Gtk.PopoverMenu):
 
     open_in_window_button = Gtk.Template.Child()
 
-    def __init__(self):
+    def __init__(self, note: Note = None):
         super(NoteActionsPopover, self).__init__()
+        self.note = note
+
+    def set_note(self, note: Note):
+        self.note = note
        
     # @Gtk.Template.Callback('on_open_in_window_button_clicked')
     # def _on_open_in_window_button_clicked(self, btn):

@@ -7,16 +7,8 @@ box.editor-text-box {
     border: none;
 }
 
-.add-notebook-box > entry {
-    border-radius: 6px 0px 0px 6px;
-}
-
-.add-notebook-box > button {
-    border-radius: 0px 6px 6px 0px;
-}
-
 .note-search-entry {
     border-radius: 4px;
     margin: 3px;
-    padding: 6px;
+    padding: 3px;
 }
