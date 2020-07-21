@@ -57,11 +57,12 @@
               </packing>
             </child>
             <child>
-              <object class="GtkModelButton">
+              <object class="GtkModelButton" id="move_to_button">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
                 <property name="text" translatable="yes">Move to...</property>
+                <signal name="clicked" handler="on_move_to_button_clicked" swapped="no"/>
               </object>
               <packing>
                 <property name="expand">False</property>

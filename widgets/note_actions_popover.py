@@ -3,6 +3,7 @@ import logging
 from gi.repository import Gtk
 
 from widgets.models import Note
+from widgets.move_note_dialog import MoveNoteDialog
 
 log = logging.getLogger(__name__)
 
@@ -19,8 +20,9 @@ class NoteActionsPopover(Gtk.PopoverMenu):
 
     def set_note(self, note: Note):
         self.note = note
-       
-    # @Gtk.Template.Callback('on_open_in_window_button_clicked')
-    # def _on_open_in_window_button_clicked(self, btn):
-    #     # TODO: Implement me
-    #     log.warning('on_open_in_window_button_clicked was clicked, but is not implemented.')
+
+    @Gtk.Template.Callback('on_move_to_button_clicked')
+    def _on_move_to_button_clicked(self, btn):
+        diag = MoveNoteDialog(self.note)
+        diag.set_transient_for(self.get_parent())
+        diag.show()

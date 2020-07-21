@@ -6,7 +6,7 @@ from gi.repository import Gtk, Gdk, Gio, Pango
 from widgets.application_preferences_popover import ApplicationPreferencesPopover
 from widgets.edit_notebooks_dialog import EditNotebooksDialog
 from widgets.editor_buffer import UndoableBuffer
-from widgets.models import Note
+from widgets.models import Note, ApplicationState
 from widgets.note_actions_popover import NoteActionsPopover
 from widgets.notebook_selection_popover import NotebookSelectionPopover
 from widgets.rich_editor import RichEditor
@@ -16,14 +16,6 @@ log = logging.getLogger(__name__)
 # TODO: Split into multiple widgets
 # Note: We can keep state by keeping the text buffers in memory and swapping the active buffer
 # https://python-gtk-3-tutorial.readthedocs.io/en/latest/textview.html
-
-
-notes = [
-    Note('Jobs to do', 'The most effective way to destroy people is to deny an obliterate their psyche.', pinned=True),
-    Note('Gift Ideas', 'The most effective way to destroy people is to deny an obliterate their psyche.', pinned=True),
-    Note('Pluto', 'The most effective way to destroy people is to deny an obliterate their psyche.', pinned=False),
-    Note('Something else', 'The most effective way to destroy people is to deny an obliterate their psyche.', pinned=False),
-]
 
 
 @Gtk.Template.from_file('ui/MainWindow.ui')
@@ -40,8 +32,10 @@ class MainWindow(Gtk.ApplicationWindow):
     note_selection_button_label: Gtk.Label = Gtk.Template.Child()
     notes_listbox: Gtk.ListBox = Gtk.Template.Child()
 
-    def __init__(self):
+    def __init__(self, state: ApplicationState):
         super(MainWindow, self).__init__()
+
+        self.application_state = state
 
         self.editor = RichEditor()
         self.editor.set_margin_top(10)
@@ -70,7 +64,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self.application_preferences_popover = ApplicationPreferencesPopover()
         self.preferences_button.set_popover(self.application_preferences_popover)
        
-        self.notebook_selection_popover = NotebookSelectionPopover()
+        self.notebook_selection_popover = NotebookSelectionPopover(state)
         self.note_selection_button.set_popover(self.notebook_selection_popover)
 
         self.notes_model: Gio.ListStore = Gio.ListStore().new(Note)
@@ -108,10 +102,8 @@ class MainWindow(Gtk.ApplicationWindow):
 
         self.notes_listbox.set_header_func(header_func, None)
 
-        for note in notes:
+        for note in state.notes:
             self.notes_model.append(note)
-
-        # self.notes_listbox.connect('button-press-event', self._on_notes_list_button_pressed)
 
         # TODO: Remove me
         buf: UndoableBuffer = self.editor.get_buffer()
@@ -119,9 +111,6 @@ class MainWindow(Gtk.ApplicationWindow):
         buf.insert_markup(it, '<b>Bold text</b>\n', -1)
         buf.insert_markup(it, '<i>Italics text</i>\n', -1)
         buf.insert(it, '\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nFoobar', -1)
-
-    # def _on_notes_list_button_pressed(self, list_box: Gtk.ListBox, event: Gdk.EventButton):
-    #     print(list_box, event)
 
     def _on_add_notebook_button_pressed(self, btn):
         diag = EditNotebooksDialog()

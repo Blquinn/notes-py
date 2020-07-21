@@ -2,6 +2,9 @@ import logging
 import os
 
 import gi
+
+from widgets.models import ApplicationState, Note, NoteBook
+
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk
 from widgets.main_window import MainWindow
@@ -29,7 +32,23 @@ if __name__ == '__main__':
         css_provider,
         Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
-    win = MainWindow()
+    state = ApplicationState()
+
+    notebook = NoteBook('Astronomy')
+    state.notebooks.append(notebook)
+    state.notebooks.append(NoteBook('Fun stuff'))
+
+    notes = [
+        Note('Jobs to do', 'The most effective way to destroy people is to deny an obliterate their psyche.', notebook, pinned=True),
+        Note('Gift Ideas', 'The most effective way to destroy people is to deny an obliterate their psyche.', notebook, pinned=True),
+        Note('Pluto', 'The most effective way to destroy people is to deny an obliterate their psyche.', notebook, pinned=False),
+        Note('Something else', 'The most effective way to destroy people is to deny an obliterate their psyche.', notebook, pinned=False),
+    ]
+
+    for note in notes:
+        state.notes.append(note)
+
+    win = MainWindow(state)
     win.connect("destroy", Gtk.main_quit)
     win.show_all()
     log.info('Starting application.')
