@@ -12,3 +12,11 @@ box.editor-text-box {
     margin: 3px;
     padding: 3px;
 }
+
+.title-text-entry {
+	padding: 6px;
+	margin-left: -6px;
+	border-radius: 4px;
+	font-size: 22pt;
+	font-weight: bold;
+}

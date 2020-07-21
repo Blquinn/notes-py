@@ -1,5 +1,6 @@
 from gi.repository import Gtk
 
+from widgets.edit_notebooks_dialog import EditNotebooksDialog
 from widgets.models import ApplicationState, NoteBook
 
 
@@ -28,6 +29,12 @@ class NotebookSelectionPopover(Gtk.PopoverMenu):
         lbl = Gtk.Label(label=notebook.name)
         lbl.set_halign(Gtk.Align.START)
         return lbl
+    
+    @Gtk.Template.Callback('on_edit_notebooks_button_clicked')
+    def _on_edit_notebooks_button_clicked(self, btn):
+        diag = EditNotebooksDialog()
+        diag.set_transient_for(self.get_parent())
+        diag.show()
 
     # TODO: Set filter on row activate
     # TODO: Fix color of listbox

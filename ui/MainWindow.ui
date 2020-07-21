@@ -43,7 +43,6 @@
               <object class="GtkScrolledWindow">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
-                <property name="shadow_type">in</property>
                 <property name="max_content_width">200</property>
                 <child>
                   <object class="GtkViewport" id="notes_viewport">
@@ -93,14 +92,14 @@
                     <property name="margin_top">10</property>
                     <property name="orientation">vertical</property>
                     <child>
-                      <object class="GtkLabel">
+                      <object class="GtkEntry" id="note_title_entry">
                         <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">Pluto</property>
-                        <property name="xalign">0</property>
-                        <attributes>
-                          <attribute name="font-desc" value="Sans Bold 17"/>
-                        </attributes>
+                        <property name="can_focus">True</property>
+                        <property name="placeholder_text" translatable="yes">Title...</property>
+                        <style>
+                          <class name="flat"/>
+                          <class name="title-text-entry"/>
+                        </style>
                       </object>
                       <packing>
                         <property name="expand">False</property>
@@ -149,10 +148,15 @@
                           </packing>
                         </child>
                         <child>
-                          <object class="GtkLabel">
-                            <property name="visible">True</property>
-                            <property name="can_focus">False</property>
+                          <object class="GtkButton" id="note_notebook_button">
                             <property name="label" translatable="yes">Astronomy</property>
+                            <property name="visible">True</property>
+                            <property name="can_focus">True</property>
+                            <property name="receives_default">True</property>
+                            <signal name="clicked" handler="on_note_notebook_button_clicked" swapped="no"/>
+                            <style>
+                              <class name="flat"/>
+                            </style>
                           </object>
                           <packing>
                             <property name="expand">False</property>
@@ -230,7 +234,7 @@
                               </object>
                             </child>
                             <style>
-                              <class name="flat"/>
+                              <class name="toggle"/>
                             </style>
                           </object>
                           <packing>
@@ -253,7 +257,7 @@
                               </object>
                             </child>
                             <style>
-                              <class name="flat"/>
+                              <class name="toggle"/>
                             </style>
                           </object>
                           <packing>
@@ -276,7 +280,7 @@
                               </object>
                             </child>
                             <style>
-                              <class name="flat"/>
+                              <class name="toggle"/>
                             </style>
                           </object>
                           <packing>
@@ -299,7 +303,7 @@
                               </object>
                             </child>
                             <style>
-                              <class name="flat"/>
+                              <class name="toggle"/>
                             </style>
                           </object>
                           <packing>
@@ -338,7 +342,7 @@
                               </object>
                             </child>
                             <style>
-                              <class name="flat"/>
+                              <class name="toggle"/>
                             </style>
                           </object>
                           <packing>
@@ -361,7 +365,7 @@
                               </object>
                             </child>
                             <style>
-                              <class name="flat"/>
+                              <class name="toggle"/>
                             </style>
                           </object>
                           <packing>

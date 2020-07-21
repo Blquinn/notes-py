@@ -7,6 +7,7 @@ from widgets.application_preferences_popover import ApplicationPreferencesPopove
 from widgets.edit_notebooks_dialog import EditNotebooksDialog
 from widgets.editor_buffer import UndoableBuffer
 from widgets.models import Note, ApplicationState
+from widgets.move_note_dialog import MoveNoteDialog
 from widgets.note_actions_popover import NoteActionsPopover
 from widgets.notebook_selection_popover import NotebookSelectionPopover
 from widgets.rich_editor import RichEditor
@@ -114,6 +115,12 @@ class MainWindow(Gtk.ApplicationWindow):
 
     def _on_add_notebook_button_pressed(self, btn):
         diag = EditNotebooksDialog()
+        diag.set_transient_for(self)
+        diag.show()
+
+    @Gtk.Template.Callback('on_note_notebook_button_clicked')
+    def _on_note_notebook_button_clicked(self, btn):
+        diag = MoveNoteDialog(self.application_state.notes[0])
         diag.set_transient_for(self)
         diag.show()
 
