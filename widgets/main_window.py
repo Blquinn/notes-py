@@ -1,14 +1,14 @@
 import logging
 from typing import Union
 
-from gi.repository import Gtk, Gdk, Gio, Pango, GObject
+from gi.repository import Gtk, Gdk, Pango
 
 from models.db import NoteDao
+from models.models import Note
 from widgets.application_preferences_popover import ApplicationPreferencesPopover
 from widgets.edit_notebooks_dialog import EditNotebooksDialog
 from widgets.editor_buffer import UndoableBuffer
 from widgets.models import ApplicationState
-from models.models import Note
 from widgets.move_note_dialog import MoveNoteDialog
 from widgets.note_actions_popover import NoteActionsPopover
 from widgets.notebook_selection_popover import NotebookSelectionPopover
@@ -35,11 +35,15 @@ class MainWindow(Gtk.ApplicationWindow):
     note_selection_button_label: Gtk.Label = Gtk.Template.Child()
     notes_listbox: Gtk.ListBox = Gtk.Template.Child()
     notes_loading_spinner: Gtk.Spinner = Gtk.Template.Child()
+    loading_stack: Gtk.Stack = Gtk.Template.Child()
 
     def __init__(self, note_dao: NoteDao):
         super(MainWindow, self).__init__()
 
-        self._loading = False
+        # TODO: Get loading spinner working, especially if loading from cloud
+        # self.notes_loading_spinner.start()
+        # self.notes_loading_spinner.set_visible(True)
+        # self.loading_stack.set_visible_child(self.notes_loading_spinner)
 
         self.note_dao = note_dao
         self.application_state = ApplicationState()
@@ -75,6 +79,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self.note_selection_button.set_popover(self.notebook_selection_popover)
 
         self.notes_listbox.bind_model(self.application_state.notes, self._create_sidebar_note_widget)
+        self.notes_listbox.set_filter_func(self._filter_notes, None)
 
         def header_func(row: Gtk.ListBoxRow, before: Union[Gtk.ListBoxRow, None], user_data):
             note: Note = self.application_state.notes[row.get_index()]
@@ -116,19 +121,35 @@ class MainWindow(Gtk.ApplicationWindow):
         buf.insert_markup(it, '<i>Italics text</i>\n', -1)
         buf.insert(it, '\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nFoobar', -1)
 
-        self.note_dao.get_all_notes().add_done_callback(self._on_notes_loaded)
+        self.note_dao.get_all_notes_and_notebooks().add_done_callback(self._on_notes_loaded)
+
+        self.application_state.connect('notify::active-notebook', self._on_active_notebook_changed)
+
+    def _on_active_notebook_changed(self, state, *args):
+        self.notes_listbox.invalidate_filter()
+
+    def _filter_notes(self, row: Gtk.ListBoxRow, data) -> bool:
+        note = self.application_state.notes[row.get_index()]
+
+        if note.trash:
+            return False
+
+        anb = self.application_state.active_notebook
+        if anb and note.notebook.pk != anb.pk:
+            return False
+
+        return True
 
     def _on_notes_loaded(self, notes_fut):
-        notes = notes_fut.result()
+        (notes, notebooks) = notes_fut.result()
         log.info(f'Loaded {len(notes)} notes from local db.')
         for note in notes:
             self.application_state.notes.append(note)
 
-        notebooks = sorted({n.notebook.pk: n.notebook for n in notes}.values(), key=lambda x: x.name)
         for nb in notebooks:
             self.application_state.notebooks.append(nb)
 
-        self.notes_loading_spinner.stop()
+        # self.notes_loading_spinner.stop()
 
     def _on_add_notebook_button_pressed(self, btn):
         diag = EditNotebooksDialog()

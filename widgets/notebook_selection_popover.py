@@ -15,6 +15,7 @@ class NotebookSelectionPopover(Gtk.PopoverMenu):
 
     def __init__(self, state: ApplicationState):
         super(NotebookSelectionPopover, self).__init__()
+        self.application_state = state
         self.notebooks_list.bind_model(state.notebooks, self._create_notebook_widget)
         self.notebooks_list.set_header_func(self._create_header, None)
 
@@ -39,5 +40,11 @@ class NotebookSelectionPopover(Gtk.PopoverMenu):
         diag.set_transient_for(self.get_parent())
         diag.show()
 
-    # TODO: Set filter on row activate
-    # TODO: Fix color of listbox
+    @Gtk.Template.Callback('on_notebooks_list_row_activated')
+    def _on_notebooks_list_row_activated(self, list_box, row: Gtk.ListBoxRow):
+        nb = self.application_state.notebooks[row.get_index()]
+        self.application_state.active_notebook = nb
+    
+    @Gtk.Template.Callback('on_all_notebooks_button_clicked') 
+    def _on_all_notebooks_button_clicked(self, btn):
+        self.application_state.active_notebook = None

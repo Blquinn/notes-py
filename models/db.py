@@ -85,6 +85,14 @@ class NoteBookDao(DaoBase):
 
         return DB_EXECUTOR.submit(fn)
 
+    def _find_all(self):
+        with self.db:
+            rows = self.db.execute(""" select id, "name" from notebooks """).fetchall()
+            return [NoteBook(pk=r[0], name=r[1]) for r in rows]
+
+    def find_all(self):
+        return DB_EXECUTOR.submit(self._find_all)
+
 
 class NoteDao(DaoBase):
     def __init__(self):
@@ -101,19 +109,28 @@ class NoteDao(DaoBase):
                     pinned=bool(row[4]), trash=bool(row[3]),
                     last_updated=datetime.fromtimestamp(row[7]))
 
+    def _get_all_notes(self) -> List[Note]:
+        rows = self.db.execute("""
+        select n.id, n.title, n.note_contents, n.is_in_trash, n.is_pinned, nb.id, 
+            nb.name, n.last_updated
+        from notes n
+        inner join notebooks nb on n.notebook_id = nb.id
+        order by n.is_pinned, n.last_updated desc
+        """).fetchall()
+        return [self.read_note_row(r) for r in rows]
+
     def get_all_notes(self):
         """
         Gets all notes from db.
         :return: Future[List[Note]]
         """
-        def fn() -> List[Note]:
-            rows = self.db.execute("""
-            select n.id, n.title, n.note_contents, n.is_in_trash, n.is_pinned, nb.id, 
-                nb.name, n.last_updated
-            from notes n
-            inner join notebooks nb on n.notebook_id = nb.id
-            """).fetchall()
-            return [self.read_note_row(r) for r in rows]
+        return DB_EXECUTOR.submit(self._get_all_notes)
+
+    def get_all_notes_and_notebooks(self):
+        def fn():
+            notes = self._get_all_notes()
+            notebooks = self.notebook_dao._find_all()
+            return notes, notebooks
 
         return DB_EXECUTOR.submit(fn)
 
