@@ -1,12 +1,14 @@
 import logging
 from typing import Union
 
-from gi.repository import Gtk, Gdk, Gio, Pango
+from gi.repository import Gtk, Gdk, Gio, Pango, GObject
 
+from models.db import NoteDao
 from widgets.application_preferences_popover import ApplicationPreferencesPopover
 from widgets.edit_notebooks_dialog import EditNotebooksDialog
 from widgets.editor_buffer import UndoableBuffer
-from widgets.models import Note, ApplicationState
+from widgets.models import ApplicationState
+from models.models import Note
 from widgets.move_note_dialog import MoveNoteDialog
 from widgets.note_actions_popover import NoteActionsPopover
 from widgets.notebook_selection_popover import NotebookSelectionPopover
@@ -32,11 +34,15 @@ class MainWindow(Gtk.ApplicationWindow):
     note_selection_button: Gtk.MenuButton = Gtk.Template.Child()
     note_selection_button_label: Gtk.Label = Gtk.Template.Child()
     notes_listbox: Gtk.ListBox = Gtk.Template.Child()
+    notes_loading_spinner: Gtk.Spinner = Gtk.Template.Child()
 
-    def __init__(self, state: ApplicationState):
+    def __init__(self, note_dao: NoteDao):
         super(MainWindow, self).__init__()
 
-        self.application_state = state
+        self._loading = False
+
+        self.note_dao = note_dao
+        self.application_state = ApplicationState()
 
         self.editor = RichEditor()
         self.editor.set_margin_top(10)
@@ -65,17 +71,17 @@ class MainWindow(Gtk.ApplicationWindow):
         self.application_preferences_popover = ApplicationPreferencesPopover()
         self.preferences_button.set_popover(self.application_preferences_popover)
        
-        self.notebook_selection_popover = NotebookSelectionPopover(state)
+        self.notebook_selection_popover = NotebookSelectionPopover(self.application_state)
         self.note_selection_button.set_popover(self.notebook_selection_popover)
 
-        self.notes_model: Gio.ListStore = Gio.ListStore().new(Note)
-        self.notes_listbox.bind_model(self.notes_model, self._create_sidebar_note_widget)
+        self.notes_listbox.bind_model(self.application_state.notes, self._create_sidebar_note_widget)
 
         def header_func(row: Gtk.ListBoxRow, before: Union[Gtk.ListBoxRow, None], user_data):
-            note: Note = self.notes_model[row.get_index()]
+            note: Note = self.application_state.notes[row.get_index()]
 
             def create_header(text: str):
                 box = Gtk.VBox()
+                box.get_style_context().add_class('list-header')
                 box.set_margin_top(10)
 
                 lbl = Gtk.Label(label=text)
@@ -97,14 +103,11 @@ class MainWindow(Gtk.ApplicationWindow):
                     row.set_header(create_header('Other Notes'))
                 return
 
-            before_note: Note = self.notes_model[before.get_index()]
+            before_note: Note = self.application_state.notes[before.get_index()]
             if before_note.pinned and not note.pinned:
                 row.set_header(create_header('Other Notes'))
 
         self.notes_listbox.set_header_func(header_func, None)
-
-        for note in state.notes:
-            self.notes_model.append(note)
 
         # TODO: Remove me
         buf: UndoableBuffer = self.editor.get_buffer()
@@ -112,6 +115,20 @@ class MainWindow(Gtk.ApplicationWindow):
         buf.insert_markup(it, '<b>Bold text</b>\n', -1)
         buf.insert_markup(it, '<i>Italics text</i>\n', -1)
         buf.insert(it, '\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nFoobar', -1)
+
+        self.note_dao.get_all_notes().add_done_callback(self._on_notes_loaded)
+
+    def _on_notes_loaded(self, notes_fut):
+        notes = notes_fut.result()
+        log.info(f'Loaded {len(notes)} notes from local db.')
+        for note in notes:
+            self.application_state.notes.append(note)
+
+        notebooks = sorted({n.notebook.pk: n.notebook for n in notes}.values(), key=lambda x: x.name)
+        for nb in notebooks:
+            self.application_state.notebooks.append(nb)
+
+        self.notes_loading_spinner.stop()
 
     def _on_add_notebook_button_pressed(self, btn):
         diag = EditNotebooksDialog()
@@ -125,7 +142,9 @@ class MainWindow(Gtk.ApplicationWindow):
         diag.show()
 
     def _create_sidebar_note_widget(self, note: Note):
-        return NoteListItem(note)
+        ni = NoteListItem(note)
+        ni.show_all()
+        return ni
 
 
 class NoteListItem(Gtk.EventBox):
@@ -148,7 +167,7 @@ class NoteListItem(Gtk.EventBox):
         spacer.set_hexpand(True)
         top.add(spacer)
 
-        time_lbl = Gtk.Label(label=note.last_updated)
+        time_lbl = Gtk.Label(label=note.format_last_updated())
         time_lbl.set_ellipsize(Pango.EllipsizeMode.END)
         top.add(time_lbl)
         top.set_child_packing(time_lbl, False, False, 10, Gtk.PackType.END)
@@ -156,7 +175,11 @@ class NoteListItem(Gtk.EventBox):
         inner_box.add(top)
         inner_box.set_child_packing(top, False, False, 0, Gtk.PackType.START)
 
-        bottom = Gtk.Label(label=note.body)
+        start: Gtk.TextIter = note.body.get_start_iter()
+        end = start.copy()
+        end.forward_chars(200)
+        preview_text = note.body.get_text(start, end, False)
+        bottom = Gtk.Label(label=preview_text)
         bottom.set_ellipsize(Pango.EllipsizeMode.END)
         bottom.set_lines(2)
         bottom.set_line_wrap(True)

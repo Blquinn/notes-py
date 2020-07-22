@@ -2,7 +2,7 @@ import logging
 
 from gi.repository import Gtk
 
-from widgets.models import Note
+from models.models import Note
 from widgets.move_note_dialog import MoveNoteDialog
 
 log = logging.getLogger(__name__)

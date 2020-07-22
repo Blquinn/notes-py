@@ -1,3 +1,8 @@
+/* Prevent listboxes from using white background */
+list {
+	background-color: transparent;
+}
+
 box.editor-text-box {
     background-color: white;
     border: none;
@@ -19,4 +24,10 @@ box.editor-text-box {
 	border-radius: 4px;
 	font-size: 22pt;
 	font-weight: bold;
+}
+
+/* The standard list header style */
+.list-header {
+    color: grey;
+    font-weight: bold;
 }

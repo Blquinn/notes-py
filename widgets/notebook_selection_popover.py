@@ -1,7 +1,10 @@
+from typing import List
+
 from gi.repository import Gtk
 
 from widgets.edit_notebooks_dialog import EditNotebooksDialog
-from widgets.models import ApplicationState, NoteBook
+from widgets.models import ApplicationState
+from models.models import NoteBook
 
 
 @Gtk.Template.from_file('ui/NotebookSelectionPopover.ui')
@@ -12,7 +15,6 @@ class NotebookSelectionPopover(Gtk.PopoverMenu):
 
     def __init__(self, state: ApplicationState):
         super(NotebookSelectionPopover, self).__init__()
-
         self.notebooks_list.bind_model(state.notebooks, self._create_notebook_widget)
         self.notebooks_list.set_header_func(self._create_header, None)
 
@@ -23,6 +25,7 @@ class NotebookSelectionPopover(Gtk.PopoverMenu):
 
         lbl = Gtk.Label(label='Notebooks')
         lbl.set_halign(Gtk.Align.START)
+        lbl.get_style_context().add_class('list-header')
         row.set_header(lbl)
 
     def _create_notebook_widget(self, notebook: NoteBook):
