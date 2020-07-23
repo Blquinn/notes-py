@@ -4,7 +4,7 @@ from typing import Union
 from gi.repository import Gtk, Gdk, Pango
 
 from models.db import NoteDao
-from models.models import Note
+from models.models import Note, NoteBook
 from widgets.application_preferences_popover import ApplicationPreferencesPopover
 from widgets.edit_notebooks_dialog import EditNotebooksDialog
 from widgets.editor_buffer import UndoableBuffer
@@ -36,19 +36,20 @@ class MainWindow(Gtk.ApplicationWindow):
     notes_listbox: Gtk.ListBox = Gtk.Template.Child()
     notes_loading_spinner: Gtk.Spinner = Gtk.Template.Child()
     loading_stack: Gtk.Stack = Gtk.Template.Child()
+    notebook_button_label: Gtk.Label = Gtk.Template.Child()
+    note_title_entry: Gtk.Entry = Gtk.Template.Child()
+    note_search_entry: Gtk.SearchEntry = Gtk.Template.Child()
+    last_updated_label: Gtk.Label = Gtk.Template.Child()
 
     def __init__(self, note_dao: NoteDao):
         super(MainWindow, self).__init__()
 
-        # TODO: Get loading spinner working, especially if loading from cloud
-        # self.notes_loading_spinner.start()
-        # self.notes_loading_spinner.set_visible(True)
-        # self.loading_stack.set_visible_child(self.notes_loading_spinner)
+        self.search_filter = ''
 
         self.note_dao = note_dao
         self.application_state = ApplicationState()
 
-        self.editor = RichEditor()
+        self.editor = RichEditor(self.application_state)
         self.editor.set_margin_top(10)
         self.editor.set_margin_start(30)
         self.editor.set_margin_end(30)
@@ -82,7 +83,11 @@ class MainWindow(Gtk.ApplicationWindow):
         self.notes_listbox.set_filter_func(self._filter_notes, None)
 
         def header_func(row: Gtk.ListBoxRow, before: Union[Gtk.ListBoxRow, None], user_data):
-            note: Note = self.application_state.notes[row.get_index()]
+            """
+            Build notes list header. Note that pinned notes, must all come
+            first in the list for this impl to work.
+            """
+            note: Note = row.get_child().note
 
             def create_header(text: str):
                 box = Gtk.VBox()
@@ -92,7 +97,6 @@ class MainWindow(Gtk.ApplicationWindow):
                 lbl = Gtk.Label(label=text)
                 lbl.set_halign(Gtk.Align.START)
                 lbl.set_margin_start(10)
-                # lbl.modify_font('')
                 box.add(lbl)
 
                 sep = Gtk.Separator()
@@ -108,7 +112,7 @@ class MainWindow(Gtk.ApplicationWindow):
                     row.set_header(create_header('Other Notes'))
                 return
 
-            before_note: Note = self.application_state.notes[before.get_index()]
+            before_note: Note = before.get_child().note
             if before_note.pinned and not note.pinned:
                 row.set_header(create_header('Other Notes'))
 
@@ -123,13 +127,43 @@ class MainWindow(Gtk.ApplicationWindow):
 
         self.note_dao.get_all_notes_and_notebooks().add_done_callback(self._on_notes_loaded)
 
+        self.application_state.connect('notify::active-note', self._on_active_note_changed)
         self.application_state.connect('notify::active-notebook', self._on_active_notebook_changed)
 
+    # TODO: Select first note in notebook
     def _on_active_notebook_changed(self, state, *args):
+        """Re-filter notes list when active notebook is changed."""
         self.notes_listbox.invalidate_filter()
+        nb: NoteBook = self.application_state.active_notebook
+        notebook_name = nb.name if nb else 'All Notebooks'
+        self.note_selection_button_label.set_text(notebook_name)
+        if nb:
+            nb.connect('notify::name', self._on_active_notebook_name_changed)
+
+    def _on_active_notebook_name_changed(self, nb: NoteBook, *args):
+        self.note_selection_button_label.set_text(nb.name)
+
+    def _on_active_note_changed(self, state, *args):
+        note: Note = self.application_state.active_note
+        if not note:
+            return
+
+        notebook_name = note.notebook.name if note.notebook else 'Other Notes'
+        self.notebook_button_label.set_text(notebook_name)
+        self.note_title_entry.set_text(note.title)
+        self.editor.set_buffer(note.body)
+        self.last_updated_label.set_text(f'Last Updated {note.format_last_updated()}')
 
     def _filter_notes(self, row: Gtk.ListBoxRow, data) -> bool:
-        note = self.application_state.notes[row.get_index()]
+        """
+        Note filtering function, will be re-run when notes_list.invalidate_filter() is called.
+        Currently supports filtering by notebook.
+        """
+        note: Note = row.get_child().note
+
+        # TODO: Search body?
+        if self.search_filter and self.search_filter.lower() not in note.title.lower():
+            return False
 
         if note.trash:
             return False
@@ -138,10 +172,16 @@ class MainWindow(Gtk.ApplicationWindow):
         if anb and note.notebook.pk != anb.pk:
             return False
 
-        return True
+        return True 
 
     def _on_notes_loaded(self, notes_fut):
-        (notes, notebooks) = notes_fut.result()
+        """Callback for when the database completes loading the notes + notebooks."""
+        try:
+            (notes, notebooks) = notes_fut.result()
+        except Exception as e:
+            log.error(f'Failed to load notes from db {e}')
+            return
+
         log.info(f'Loaded {len(notes)} notes from local db.')
         for note in notes:
             self.application_state.notes.append(note)
@@ -149,18 +189,29 @@ class MainWindow(Gtk.ApplicationWindow):
         for nb in notebooks:
             self.application_state.notebooks.append(nb)
 
-        # self.notes_loading_spinner.stop()
+        if notes:
+            self.notes_listbox.get_row_at_index(0).activate()
 
     def _on_add_notebook_button_pressed(self, btn):
-        diag = EditNotebooksDialog()
+        diag = EditNotebooksDialog(self.application_state)
         diag.set_transient_for(self)
         diag.show()
 
     @Gtk.Template.Callback('on_note_notebook_button_clicked')
     def _on_note_notebook_button_clicked(self, btn):
-        diag = MoveNoteDialog(self.application_state.notes[0])
+        diag = MoveNoteDialog(self.application_state.active_note)
         diag.set_transient_for(self)
         diag.show()
+
+    @Gtk.Template.Callback('on_note_search_entry_changed')
+    def _on_note_search_entry_changed(self, entry: Gtk.SearchEntry):
+        self.search_filter = entry.get_text()
+        self.notes_listbox.invalidate_filter()
+        
+    @Gtk.Template.Callback('on_notes_listbox_row_activated')
+    def _on_notes_listbox_row_activated(self, lb: Gtk.ListBox, row: Gtk.ListBoxRow):
+        nli: NoteListItem = row.get_child()
+        self.application_state.active_note = nli.note
 
     def _create_sidebar_note_widget(self, note: Note):
         ni = NoteListItem(note)

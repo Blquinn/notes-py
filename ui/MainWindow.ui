@@ -29,6 +29,7 @@
                 <property name="primary_icon_name">edit-find-symbolic</property>
                 <property name="primary_icon_activatable">False</property>
                 <property name="primary_icon_sensitive">False</property>
+                <signal name="changed" handler="on_note_search_entry_changed" swapped="no"/>
                 <style>
                   <class name="note-search-entry"/>
                 </style>
@@ -57,6 +58,7 @@
                           <object class="GtkListBox" id="notes_listbox">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
+                            <signal name="row-activated" handler="on_notes_listbox_row_activated" swapped="no"/>
                             <style>
                               <class name="notes-listbox"/>
                             </style>
@@ -149,10 +151,9 @@
                         <property name="can_focus">False</property>
                         <property name="spacing">5</property>
                         <child>
-                          <object class="GtkLabel">
+                          <object class="GtkLabel" id="last_updated_label">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
-                            <property name="label" translatable="yes">Last Updated Yesterday</property>
                           </object>
                           <packing>
                             <property name="expand">False</property>
@@ -161,24 +162,42 @@
                           </packing>
                         </child>
                         <child>
-                          <object class="GtkImage">
-                            <property name="visible">True</property>
-                            <property name="can_focus">False</property>
-                            <property name="icon_name">text-x-generic-symbolic</property>
-                          </object>
-                          <packing>
-                            <property name="expand">False</property>
-                            <property name="fill">True</property>
-                            <property name="position">1</property>
-                          </packing>
-                        </child>
-                        <child>
                           <object class="GtkButton" id="note_notebook_button">
-                            <property name="label" translatable="yes">Astronomy</property>
                             <property name="visible">True</property>
                             <property name="can_focus">True</property>
                             <property name="receives_default">True</property>
                             <signal name="clicked" handler="on_note_notebook_button_clicked" swapped="no"/>
+                            <child>
+                              <object class="GtkBox">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="spacing">5</property>
+                                <child>
+                                  <object class="GtkImage">
+                                    <property name="visible">True</property>
+                                    <property name="can_focus">False</property>
+                                    <property name="icon_name">text-x-generic-symbolic</property>
+                                  </object>
+                                  <packing>
+                                    <property name="expand">False</property>
+                                    <property name="fill">True</property>
+                                    <property name="position">0</property>
+                                  </packing>
+                                </child>
+                                <child>
+                                  <object class="GtkLabel" id="notebook_button_label">
+                                    <property name="visible">True</property>
+                                    <property name="can_focus">False</property>
+                                    <property name="label" translatable="yes">Astronomy</property>
+                                  </object>
+                                  <packing>
+                                    <property name="expand">False</property>
+                                    <property name="fill">True</property>
+                                    <property name="position">1</property>
+                                  </packing>
+                                </child>
+                              </object>
+                            </child>
                             <style>
                               <class name="flat"/>
                             </style>
@@ -258,9 +277,6 @@
                                 <property name="icon_name">format-text-bold-symbolic</property>
                               </object>
                             </child>
-                            <style>
-                              <class name="toggle"/>
-                            </style>
                           </object>
                           <packing>
                             <property name="expand">False</property>
@@ -349,6 +365,61 @@
                       </packing>
                     </child>
                     <child>
+                      <object class="GtkButtonBox">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="layout_style">start</property>
+                        <child>
+                          <object class="GtkButton" id="unordered_list_button">
+                            <property name="visible">True</property>
+                            <property name="can_focus">True</property>
+                            <property name="receives_default">True</property>
+                            <child>
+                              <object class="GtkImage">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="icon_name">view-list-symbolic</property>
+                              </object>
+                            </child>
+                          </object>
+                          <packing>
+                            <property name="expand">True</property>
+                            <property name="fill">True</property>
+                            <property name="position">0</property>
+                            <property name="non_homogeneous">True</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkButton" id="ordered_list_button">
+                            <property name="visible">True</property>
+                            <property name="can_focus">True</property>
+                            <property name="receives_default">True</property>
+                            <child>
+                              <object class="GtkImage">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="icon_name">view-list-ordered-symbolic</property>
+                              </object>
+                            </child>
+                          </object>
+                          <packing>
+                            <property name="expand">True</property>
+                            <property name="fill">True</property>
+                            <property name="position">1</property>
+                            <property name="non_homogeneous">True</property>
+                          </packing>
+                        </child>
+                        <style>
+                          <class name="linked"/>
+                        </style>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">1</property>
+                      </packing>
+                    </child>
+                    <child>
                       <object class="GtkButtonBox" id="indent_bar">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
@@ -407,7 +478,7 @@
                       <packing>
                         <property name="expand">False</property>
                         <property name="fill">True</property>
-                        <property name="position">1</property>
+                        <property name="position">2</property>
                       </packing>
                     </child>
                     <style>
@@ -418,6 +489,10 @@
                     <property name="position">0</property>
                   </packing>
                 </child>
+                <style>
+                  <class name="editor-action-bar"/>
+                  <class name="background"/>
+                </style>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -462,6 +537,7 @@
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="label" translatable="yes">All Notebooks</property>
+                        <property name="ellipsize">end</property>
                       </object>
                       <packing>
                         <property name="expand">False</property>
@@ -483,6 +559,9 @@
                     </child>
                   </object>
                 </child>
+                <style>
+                  <class name="flat"/>
+                </style>
               </object>
             </child>
           </object>

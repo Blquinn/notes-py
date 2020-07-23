@@ -1,6 +1,6 @@
 from typing import List
 
-from gi.repository import Gtk
+from gi.repository import Gtk, Pango, GObject
 
 from widgets.edit_notebooks_dialog import EditNotebooksDialog
 from widgets.models import ApplicationState
@@ -31,12 +31,15 @@ class NotebookSelectionPopover(Gtk.PopoverMenu):
 
     def _create_notebook_widget(self, notebook: NoteBook):
         lbl = Gtk.Label(label=notebook.name)
+        notebook.bind_property('name', lbl, 'label', 0)
+        lbl.set_ellipsize(Pango.EllipsizeMode.END)
         lbl.set_halign(Gtk.Align.START)
+        lbl.set_max_width_chars(25)
         return lbl
     
     @Gtk.Template.Callback('on_edit_notebooks_button_clicked')
     def _on_edit_notebooks_button_clicked(self, btn):
-        diag = EditNotebooksDialog()
+        diag = EditNotebooksDialog(self.application_state)
         diag.set_transient_for(self.get_parent())
         diag.show()
 

@@ -11,6 +11,7 @@ from gi.repository import Gtk
 
 from config import DATA_DIR
 from models.models import Note, NoteBook
+from widgets.editor_buffer import UndoableBuffer
 
 log = logging.getLogger(__name__)
 db_local = threading.local()
@@ -101,7 +102,7 @@ class NoteDao(DaoBase):
 
     @staticmethod
     def read_note_row(row: Tuple[Any]) -> Note:
-        buf = Gtk.TextBuffer()
+        buf = UndoableBuffer()
         fmt = buf.register_deserialize_tagset()
         notebook = NoteBook(name=row[6], pk=row[5])
         buf.deserialize(buf, fmt, buf.get_start_iter(), row[2])
@@ -115,7 +116,7 @@ class NoteDao(DaoBase):
             nb.name, n.last_updated
         from notes n
         inner join notebooks nb on n.notebook_id = nb.id
-        order by n.is_pinned, n.last_updated desc
+        order by n.is_pinned desc, n.last_updated desc
         """).fetchall()
         return [self.read_note_row(r) for r in rows]
 
