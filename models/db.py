@@ -7,8 +7,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Tuple, Any
 
-from gi.repository import Gtk
-
 from config import DATA_DIR
 from models.models import Note, NoteBook
 from widgets.editor_buffer import UndoableBuffer

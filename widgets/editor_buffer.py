@@ -45,6 +45,7 @@ class UndoableDelete:
             self.mergeable = True
 
 
+# TODO: Don't allow original setting of buffer to be undo-able.
 class UndoableBuffer(Gtk.TextBuffer):
     """text buffer with added undo capabilities
 

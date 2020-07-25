@@ -3,12 +3,12 @@ list {
 	background-color: transparent;
 }
 
-box.editor-text-box {
-    background-color: white;
-    border: none;
+scrolledwindow {
+	border: none;
 }
 
-.editor-text-box > scrolledwindow {
+box.editor-text-box {
+    background-color: white;
     border: none;
 }
 

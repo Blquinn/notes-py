@@ -1,7 +1,7 @@
 import logging
 from typing import Union
 
-from gi.repository import Gtk, Gdk, Pango
+from gi.repository import Gtk, Gdk, Pango, GLib
 
 from models.db import NoteDao
 from models.models import Note, NoteBook
@@ -19,6 +19,7 @@ log = logging.getLogger(__name__)
 # TODO: Split into multiple widgets
 # Note: We can keep state by keeping the text buffers in memory and swapping the active buffer
 # https://python-gtk-3-tutorial.readthedocs.io/en/latest/textview.html
+# TODO: Periodically update last_updated time
 
 
 @Gtk.Template.from_file('ui/MainWindow.ui')
@@ -61,7 +62,7 @@ class MainWindow(Gtk.ApplicationWindow):
         )
         self.header_main.pack_end(self.editor_actions_button)
 
-        self.editor_options_popover = NoteActionsPopover()
+        self.editor_options_popover = NoteActionsPopover(self.application_state)
         self.editor_actions_button.set_popover(self.editor_options_popover)
 
         self.add_note_button = Gtk.Button()
@@ -154,6 +155,18 @@ class MainWindow(Gtk.ApplicationWindow):
         self.editor.set_buffer(note.body)
         self.last_updated_label.set_text(f'Last Updated {note.format_last_updated()}')
 
+        # Activate row in listbox any time the active note is changed
+        for row in self.notes_listbox.get_children():
+            row: Gtk.ListBoxRow = row
+            item: NoteListItem = row.get_child()
+            if item.note == note:
+                self.notes_listbox.select_row(row)
+                break
+
+    def invalidate_note_list_filter(self):
+        self.notes_listbox.invalidate_filter()
+        self.notebook_button_label.set_text(self.application_state.active_note.notebook.name)
+
     def _filter_notes(self, row: Gtk.ListBoxRow, data) -> bool:
         """
         Note filtering function, will be re-run when notes_list.invalidate_filter() is called.
@@ -193,15 +206,19 @@ class MainWindow(Gtk.ApplicationWindow):
             self.notes_listbox.get_row_at_index(0).activate()
 
     def _on_add_notebook_button_pressed(self, btn):
-        diag = EditNotebooksDialog(self.application_state)
-        diag.set_transient_for(self)
-        diag.show()
+        """Add a new blank note to the current notebook."""
+        nb: NoteBook = self.application_state.active_notebook
+        # TODO: Save to db
+        # TODO: Prepend to beginning of non-pinned notes
+        note = Note('', nb)
+        self.application_state.notes.append(note)
+        self.application_state.active_note = note
 
     @Gtk.Template.Callback('on_note_notebook_button_clicked')
     def _on_note_notebook_button_clicked(self, btn):
-        diag = MoveNoteDialog(self.application_state.active_note)
+        diag = MoveNoteDialog(self, self.application_state.active_note, self.application_state)
         diag.set_transient_for(self)
-        diag.show()
+        diag.show_all()
 
     @Gtk.Template.Callback('on_note_search_entry_changed')
     def _on_note_search_entry_changed(self, entry: Gtk.SearchEntry):
@@ -212,18 +229,25 @@ class MainWindow(Gtk.ApplicationWindow):
     def _on_notes_listbox_row_activated(self, lb: Gtk.ListBox, row: Gtk.ListBoxRow):
         nli: NoteListItem = row.get_child()
         self.application_state.active_note = nli.note
+        
+    @Gtk.Template.Callback('on_note_title_entry_changed')
+    def _on_note_title_entry_changed(self, entry: Gtk.Entry):
+        txt = entry.get_text()
+        log.debug('Note title changed to %s', txt)
+        self.application_state.active_note.title = txt
 
     def _create_sidebar_note_widget(self, note: Note):
-        ni = NoteListItem(note)
+        ni = NoteListItem(self.application_state, note)
         ni.show_all()
         return ni
 
 
 class NoteListItem(Gtk.EventBox):
 
-    def __init__(self, note: Note):
+    def __init__(self, state: ApplicationState, note: Note):
         super(NoteListItem, self).__init__()
 
+        self.application_state = state
         self.note = note
 
         inner_box = Gtk.VBox()
@@ -231,6 +255,7 @@ class NoteListItem(Gtk.EventBox):
 
         top = Gtk.HBox()
         title_lbl = Gtk.Label(label=note.title)
+        note.bind_property('title', title_lbl, 'label', 0)
         title_lbl.set_ellipsize(Pango.EllipsizeMode.END)
         top.add(title_lbl)
         top.set_child_packing(title_lbl, False, False, 10, Gtk.PackType.START)
@@ -240,6 +265,7 @@ class NoteListItem(Gtk.EventBox):
         top.add(spacer)
 
         time_lbl = Gtk.Label(label=note.format_last_updated())
+        note.bind_property('last_updated_fmt', time_lbl, 'label', 0)
         time_lbl.set_ellipsize(Pango.EllipsizeMode.END)
         top.add(time_lbl)
         top.set_child_packing(time_lbl, False, False, 10, Gtk.PackType.END)
@@ -275,7 +301,7 @@ class NoteListItem(Gtk.EventBox):
 
         log.debug(f'Note {item.note} right clicked.')
 
-        popover = NoteActionsPopover(item.note)
+        popover = NoteActionsPopover(self.application_state, item.note)
         popover.set_relative_to(self)
         popover.show()
         popover.popup()
