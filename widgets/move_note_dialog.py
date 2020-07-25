@@ -62,7 +62,6 @@ class MoveNoteDialog(Gtk.Dialog):
         log.debug('Moving note %s to notebook %s', self.note, selected_nb)
         # TODO: update db
         self.note.notebook = selected_nb
-        self.main_window.invalidate_note_list_filter()
         self.application_state.active_notebook = selected_nb
         self.close()
 

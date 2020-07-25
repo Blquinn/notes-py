@@ -18,6 +18,7 @@ class NotebookSelectionPopover(Gtk.PopoverMenu):
         self.application_state = state
         self.notebooks_list.bind_model(state.notebooks, self._create_notebook_widget)
         self.notebooks_list.set_header_func(self._create_header, None)
+        self.application_state.connect('notify::active-notebook', self._on_active_notebook_changed)
 
     def _create_header(self, row: Gtk.ListBoxRow, before, user_data):
         # Only set header on first row
@@ -30,13 +31,16 @@ class NotebookSelectionPopover(Gtk.PopoverMenu):
         row.set_header(lbl)
 
     def _create_notebook_widget(self, notebook: NoteBook):
-        lbl = Gtk.Label(label=notebook.name)
-        notebook.bind_property('name', lbl, 'label', 0)
-        lbl.set_ellipsize(Pango.EllipsizeMode.END)
-        lbl.set_halign(Gtk.Align.START)
-        lbl.set_max_width_chars(25)
-        return lbl
-    
+        return NoteBookWidget(notebook)
+
+    def _on_active_notebook_changed(self, *args):
+        """ Ensure the correct row is selected when active notebook changes. """
+        for row in self.notebooks_list:
+            nbw: NoteBookWidget = row.get_child()
+            if nbw.notebook == self.application_state.active_notebook:
+                self.notebooks_list.select_row(row)
+                break
+
     @Gtk.Template.Callback('on_edit_notebooks_button_clicked')
     def _on_edit_notebooks_button_clicked(self, btn):
         diag = EditNotebooksDialog(self.application_state)
@@ -51,3 +55,17 @@ class NotebookSelectionPopover(Gtk.PopoverMenu):
     @Gtk.Template.Callback('on_all_notebooks_button_clicked') 
     def _on_all_notebooks_button_clicked(self, btn):
         self.application_state.active_notebook = None
+        self.notebooks_list.unselect_all()
+
+
+class NoteBookWidget(Gtk.Label):
+    def __init__(self, notebook: NoteBook):
+        super().__init__()
+
+        self.notebook = notebook
+
+        self.set_label(notebook.name)
+        notebook.bind_property('name', self, 'label', 0)
+        self.set_ellipsize(Pango.EllipsizeMode.END)
+        self.set_halign(Gtk.Align.START)
+        self.set_max_width_chars(25)

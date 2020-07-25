@@ -1,9 +1,12 @@
 from typing import Union
+import logging
 
 from gi.repository import GObject, Gio
 
 from models.db import NoteBookDao, NoteDao
 from models.models import Note, NoteBook
+
+log = logging.getLogger(__name__)
 
 
 class ApplicationState(GObject.Object):
@@ -12,7 +15,7 @@ class ApplicationState(GObject.Object):
     def __init__(self):
         super(ApplicationState, self).__init__()
 
-        # self._initializing_state = False
+        self._initializing_state = False
 
         self._notebook_dao = NoteBookDao()
         self._note_dao = NoteDao()
@@ -53,6 +56,7 @@ class ApplicationState(GObject.Object):
 
     def initialize_state(self):
         """ Initialize state loads the initial state from the local db. """
+        log.info('Initializing application state.')
 
         self.initializing_state = True
 
@@ -64,6 +68,8 @@ class ApplicationState(GObject.Object):
 
                 for note in notes:
                     self.notes.append(note)
+
+                log.info('Initialized app state.')
             finally:
                 self.initializing_state = False
 

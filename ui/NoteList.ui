@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Generated with glade 3.36.0 -->
+<interface>
+  <requires lib="gtk+" version="3.22"/>
+  <template class="NoteList" parent="GtkBox">
+    <property name="width_request">350</property>
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="orientation">vertical</property>
+    <property name="spacing">3</property>
+    <child>
+      <object class="GtkSearchEntry" id="note_search_entry">
+        <property name="visible">True</property>
+        <property name="can_focus">True</property>
+        <property name="margin_left">3</property>
+        <property name="margin_right">3</property>
+        <property name="margin_start">3</property>
+        <property name="margin_end">3</property>
+        <property name="margin_top">3</property>
+        <property name="primary_icon_name">edit-find-symbolic</property>
+        <property name="primary_icon_activatable">False</property>
+        <property name="primary_icon_sensitive">False</property>
+        <signal name="changed" handler="on_note_search_entry_changed" swapped="no"/>
+        <style>
+          <class name="note-search-entry"/>
+        </style>
+      </object>
+      <packing>
+        <property name="expand">False</property>
+        <property name="fill">True</property>
+        <property name="position">0</property>
+      </packing>
+    </child>
+    <child>
+      <object class="GtkStack" id="loading_stack">
+        <property name="visible">True</property>
+        <property name="can_focus">False</property>
+        <child>
+          <object class="GtkScrolledWindow">
+            <property name="visible">True</property>
+            <property name="can_focus">True</property>
+            <property name="max_content_width">200</property>
+            <child>
+              <object class="GtkViewport" id="notes_viewport">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="shadow_type">none</property>
+                <child>
+                  <object class="GtkListBox" id="notes_listbox">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <signal name="row-activated" handler="on_notes_listbox_row_activated" swapped="no"/>
+                    <style>
+                      <class name="notes-listbox"/>
+                    </style>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+          <packing>
+            <property name="name">page0</property>
+            <property name="title" translatable="yes">page0</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkSpinner" id="notes_loading_spinner">
+            <property name="width_request">50</property>
+            <property name="height_request">50</property>
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="halign">center</property>
+            <property name="valign">start</property>
+          </object>
+          <packing>
+            <property name="name">page1</property>
+            <property name="title" translatable="yes">page1</property>
+            <property name="position">1</property>
+          </packing>
+        </child>
+      </object>
+      <packing>
+        <property name="expand">True</property>
+        <property name="fill">True</property>
+        <property name="position">1</property>
+      </packing>
+    </child>
+  </template>
+</interface>
