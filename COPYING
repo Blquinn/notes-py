@@ -1,4 +1,5 @@
-/*
+notes
+
 Copyright (c) 2020, Benjamin Quinn <benlquinn@gmail.com>
 
 This program is free software; you can redistribute it and/or
@@ -13,38 +14,3 @@ Lesser General Public License for more details.
 
 You should have received a copy of the GNU Lesser General Public
 License along with this program; if not, see <http://www.gnu.org/licenses/>.
-*/
-
-/* Prevent listboxes from using white background */
-list {
-	background-color: transparent;
-}
-
-scrolledwindow {
-	border: none;
-}
-
-box.editor-text-box {
-    background-color: white;
-    border: none;
-}
-
-.note-search-entry {
-    border-radius: 4px;
-    margin: 3px;
-    padding: 3px;
-}
-
-.title-text-entry {
-	padding: 6px;
-	margin-left: -6px;
-	border-radius: 4px;
-	font-size: 22pt;
-	font-weight: bold;
-}
-
-/* The standard list header style */
-.list-header {
-    color: grey;
-    font-weight: bold;
-}
