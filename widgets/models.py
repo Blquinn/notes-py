@@ -1,16 +1,19 @@
-from typing import Union
 import logging
+from typing import Union
 
 from gi.repository import GObject, Gio
 
 from models.db import NoteBookDao, NoteDao
 from models.models import Note, NoteBook
+from utils import debounce
 
 log = logging.getLogger(__name__)
 
 
 class ApplicationState(GObject.Object):
     __gtype_name__ = "ApplicationState"
+
+    note_pinned = GObject.Signal()
 
     def __init__(self):
         super(ApplicationState, self).__init__()
@@ -54,6 +57,11 @@ class ApplicationState(GObject.Object):
 
     # Methods
 
+    # @debounce(500)
+    def _on_note_body_changed(self, buf, note: Note):
+        log.debug('Updating note %s', note)
+        self.update_note(note)
+
     def initialize_state(self):
         """ Initialize state loads the initial state from the local db. """
         log.info('Initializing application state.')
@@ -67,6 +75,7 @@ class ApplicationState(GObject.Object):
                     self.notebooks.append(notebook)
 
                 for note in notes:
+                    note.body.connect('changed', debounce(500)(self._on_note_body_changed), note)
                     self.notes.append(note)
 
                 log.info('Initialized app state.')
@@ -74,3 +83,55 @@ class ApplicationState(GObject.Object):
                 self.initializing_state = False
 
         self._note_dao.get_all_notes_and_notebooks().add_done_callback(_on_done)
+
+    # TODO: Fix header section bug
+    def add_new_note(self):
+        note = Note('', self.active_notebook)
+
+        # Insert as first non-pinned note in notebook
+        self.notes.insert_sorted(note, lambda a, b: int(not a.pinned))
+        self.active_note = note
+
+        def on_done(saved_note_fut):
+            note.pk = saved_note_fut.result().pk
+
+        self._note_dao.save(note).add_done_callback(on_done)
+
+    def add_new_notebook(self, name: str):
+        if not name.strip():
+            return
+
+        notebook = NoteBook(name)
+        self._notebook_dao.save(notebook)
+        self.notebooks.append(notebook)
+        self.active_notebook = notebook
+
+    def update_note(self, note: Note):
+        log.debug('Updating note %s', note)
+        self._note_dao.save(note)
+
+    def update_notebook(self, notebook: NoteBook):
+        log.debug('Updating notebook %s', notebook)
+        self._notebook_dao.save(notebook)
+
+    def move_note_to_trash(self, note: Note):
+        note.trash = True
+        self._note_dao.save(note)
+
+    def delete_notebook(self, notebook: NoteBook):
+        log.info('Deleting notebook %s', notebook)
+
+        self._notebook_dao.delete(notebook)
+
+        for note in self.notes:
+            if note.notebook == notebook:
+                note.trash = True
+
+        found, nb_idx = self.notebooks.find(notebook)
+        if found:
+            self.notebooks.remove(nb_idx)
+
+        if self.notebooks.get_n_items():
+            self.active_notebook = self.notebooks[0]
+        else:
+            self.active_notebook = None

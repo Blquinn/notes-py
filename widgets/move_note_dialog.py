@@ -9,6 +9,7 @@ log = logging.getLogger(__name__)
 
 # TODO: Actually move the note
 
+
 @Gtk.Template.from_file('ui/MoveNoteDialog.ui')
 class MoveNoteDialog(Gtk.Dialog):
     __gtype_name__ = 'MoveNoteDialog'
@@ -17,8 +18,8 @@ class MoveNoteDialog(Gtk.Dialog):
     notebooks_list: Gtk.ListBox = Gtk.Template.Child()
     new_notebook_entry: Gtk.Entry = Gtk.Template.Child()
 
-    def __init__(self, main_window: 'MainWindow', note: Note, state: ApplicationState):
-        super(MoveNoteDialog, self).__init__(use_header_bar=True)
+    def __init__(self, main_window: 'MainWindow', note: Note, state: ApplicationState, *args, **kwargs):
+        super(MoveNoteDialog, self).__init__(use_header_bar=True, *args, **kwargs)
 
         self.main_window = main_window
         self.note = note
@@ -60,19 +61,16 @@ class MoveNoteDialog(Gtk.Dialog):
         selected_nb_idx = self.notebooks_list.get_selected_row().get_index()
         selected_nb = self.application_state.notebooks[selected_nb_idx]
         log.debug('Moving note %s to notebook %s', self.note, selected_nb)
-        # TODO: update db
         self.note.notebook = selected_nb
+        self.application_state.update_note(self.note)
         self.application_state.active_notebook = selected_nb
         self.close()
 
-    # TODO: Store in db
-    @Gtk.Template.Callback('on_new_notebook_button_clicked') 
+    @Gtk.Template.Callback('on_new_notebook_button_clicked')
     def _on_new_notebook_button_clicked(self, btn):
         name = self.new_notebook_entry.get_text()
         if not name:
             return
 
         self.new_notebook_entry.set_text('')
-
-        nb = NoteBook(name)
-        self.application_state.notebooks.append(nb)
+        self.application_state.add_new_notebook(name)

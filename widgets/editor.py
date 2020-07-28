@@ -1,8 +1,9 @@
-from gi.repository import Gtk, GLib
 import logging
 
+from gi.repository import Gtk
+
 from models.models import Note
-from widgets.editor_buffer import UndoableBuffer
+from utils import debounce
 from widgets.models import ApplicationState
 from widgets.move_note_dialog import MoveNoteDialog
 from widgets.rich_editor import RichEditor
@@ -26,32 +27,35 @@ class Editor(Gtk.Box):
         self.main_window = main_window
         self.application_state = state
 
-        self.editor = RichEditor(self.application_state)
-        self.editor.set_margin_top(10)
-        self.editor.set_margin_start(30)
-        self.editor.set_margin_end(30)
+        self.editor = RichEditor(self.application_state,
+                                 margin_top=10, margin_start=30, margin_end=30)
         self.editor_scrolled_window.add(self.editor)
 
         self.application_state.connect('notify::active-note', self._on_active_note_changed)
         self.application_state.connect('notify::active-notebook', self._on_active_notebook_changed)
+        self._update_note_debounced = debounce(500)(self.__update_note)
 
-        # TODO: Remove me
-        buf: UndoableBuffer = self.editor.get_buffer()
-        it = buf.get_start_iter()
-        buf.insert_markup(it, '<b>Bold text</b>\n', -1)
-        buf.insert_markup(it, '<i>Italics text</i>\n', -1)
-        buf.insert(it, '\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nFoobar', -1)
+    def __update_note(self, note: Note):
+        log.debug('Saving note %s', note)
+        self.application_state.update_note(note)
 
     @Gtk.Template.Callback('on_note_title_entry_changed')
     def _on_note_title_entry_changed(self, entry: Gtk.Entry):
         txt = entry.get_text()
-        self.application_state.active_note.title = txt
+        note = self.application_state.active_note
+        # Prevent save from being called when title is initially set
+        if txt == note.title:
+            return
+
+        note.title = txt
+        self._update_note_debounced(note)
 
     @Gtk.Template.Callback('on_note_notebook_button_clicked')
     def _on_note_notebook_button_clicked(self, btn):
-        diag = MoveNoteDialog(self, self.application_state.active_note, self.application_state)
-        diag.set_transient_for(self.main_window)
+        diag = MoveNoteDialog(self, self.application_state.active_note, self.application_state,
+                              transient_for=self.get_toplevel())
         diag.show_all()
+        diag.run()
 
     def _on_active_note_changed(self, *args):
         note: Note = self.application_state.active_note
@@ -63,7 +67,7 @@ class Editor(Gtk.Box):
         self.notebook_button_label.set_text(notebook_name)
         self.note_title_entry.set_text(note.title)
         self.editor.set_buffer(note.body)
-        self.last_updated_label.set_text(f'Last Updated {note.format_last_updated()}')
+        self.last_updated_label.set_text(f'Last Updated {note.last_updated_formatted}')
 
     def _on_active_notebook_changed(self, *args):
         note: Note = self.application_state.active_note

@@ -1,9 +1,9 @@
-from typing import Union
 import logging
+from typing import Union
 
 from gi.repository import Gtk, Pango, Gdk
 
-from models.models import Note, NoteBook
+from models.models import Note
 from widgets.models import ApplicationState
 from widgets.note_actions_popover import NoteActionsPopover
 
@@ -29,19 +29,33 @@ class NoteList(Gtk.Box):
         self.notes_listbox.bind_model(self.application_state.notes, self._create_sidebar_note_widget)
         self.notes_listbox.set_filter_func(self._filter_notes, None)
 
-        # self.application_state.initializing_state
-        self.application_state.connect('notify::initializing-state', self._on_notes_loaded)
-
         self.notes_listbox.set_header_func(self._header_func, None)
+        self.notes_listbox.set_sort_func(self._sort_notes)
+
+        self.application_state.connect('notify::initializing-state', self._on_notes_loaded)
         self.application_state.connect('notify::active-note', self._on_active_note_changed)
         self.application_state.connect('notify::active-notebook', self._on_active_notebook_changed)
+        self.application_state.note_pinned.connect(self._on_note_pinned)
+
+    def _sort_notes(self, a_row: Note, b_row: Note):
+        """ Sorts the current view of the notes. Sorts on pinned, then last_updated. """
+        a: Note = a_row.get_child().note
+        b: Note = b_row.get_child().note
+        comp = int(b.pinned) - int(a.pinned)
+        if comp == 0:
+            comp = int(b.last_updated > a.last_updated)
+        return comp
+
+    def _on_note_pinned(self, state):
+        self.notes_listbox.invalidate_sort()
+        self.notes_listbox.invalidate_headers()
 
     def _on_active_note_changed(self, state, *args):
         note: Note = self.application_state.active_note
         if not note:
             return
 
-        # Activate row in listbox any time the active note is changed
+        # Select row in listbox any time the active note is changed
         for row in self.notes_listbox.get_children():
             row: Gtk.ListBoxRow = row
             item: NoteListItem = row.get_child()
@@ -79,7 +93,8 @@ class NoteList(Gtk.Box):
             return False
 
         anb = self.application_state.active_notebook
-        if anb and note.notebook.pk != anb.pk:
+        notebook_pk = note.notebook.pk if note.notebook else -1
+        if anb and notebook_pk != anb.pk:
             return False
 
         return True
@@ -89,7 +104,6 @@ class NoteList(Gtk.Box):
         if self.application_state.notes:
             self.notes_listbox.get_row_at_index(0).activate()
 
-    # TODO: Select first note in notebook
     def _on_active_notebook_changed(self, state, *args):
         """Re-filter notes list when active notebook is changed."""
         self.notes_listbox.invalidate_filter()
@@ -99,8 +113,6 @@ class NoteList(Gtk.Box):
         Build notes list header. Note that pinned notes, must all come
         first in the list for this impl to work.
         """
-        note: Note = row.get_child().note
-
         def create_header(text: str):
             box = Gtk.VBox()
             box.get_style_context().add_class('list-header')
@@ -117,6 +129,7 @@ class NoteList(Gtk.Box):
 
             return box
 
+        note: Note = row.get_child().note
         if not before:
             if note.pinned:
                 row.set_header(create_header('Pinned'))
@@ -127,6 +140,9 @@ class NoteList(Gtk.Box):
         before_note: Note = before.get_child().note
         if before_note.pinned and not note.pinned:
             row.set_header(create_header('Other Notes'))
+            return
+
+        row.set_header(None)
 
 
 class NoteListItem(Gtk.EventBox):
@@ -152,8 +168,8 @@ class NoteListItem(Gtk.EventBox):
         spacer.set_hexpand(True)
         top.add(spacer)
 
-        time_lbl = Gtk.Label(label=note.format_last_updated())
-        note.bind_property('last_updated_fmt', time_lbl, 'label', 0)
+        time_lbl = Gtk.Label(label=note.last_updated_formatted)
+        note.bind_property('last_updated_formatted', time_lbl, 'label', 0)
         time_lbl.set_ellipsize(Pango.EllipsizeMode.END)
         top.add(time_lbl)
         top.set_child_packing(time_lbl, False, False, 10, Gtk.PackType.END)
@@ -161,11 +177,8 @@ class NoteListItem(Gtk.EventBox):
         inner_box.add(top)
         inner_box.set_child_packing(top, False, False, 0, Gtk.PackType.START)
 
-        start: Gtk.TextIter = note.body.get_start_iter()
-        end = start.copy()
-        end.forward_chars(200)
-        preview_text = note.body.get_text(start, end, False)
-        bottom = Gtk.Label(label=preview_text)
+        bottom = Gtk.Label(label=note.get_body_preview())
+        note.bind_property('body_preview', bottom, 'label', 0)
         bottom.set_ellipsize(Pango.EllipsizeMode.END)
         bottom.set_lines(2)
         bottom.set_line_wrap(True)

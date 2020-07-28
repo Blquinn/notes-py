@@ -1,6 +1,7 @@
+import time
 from datetime import datetime
 
-from gi.repository import GObject
+from gi.repository import GObject, Gtk
 
 from widgets.editor_buffer import UndoableBuffer
 
@@ -37,7 +38,7 @@ class Note(GObject.Object):
                  trash=False,
                  pk: int = 0,
                  body: UndoableBuffer = None,
-                 last_updated: datetime = None):
+                 last_updated: float = None):
         super().__init__()
 
         self.pk = pk
@@ -45,20 +46,29 @@ class Note(GObject.Object):
         self._pinned = pinned
         self._notebook = notebook
         self._trash = trash
-        self._last_updated = last_updated or datetime.now()
+        self._last_updated = last_updated or time.time()
+        self._last_updated_fmt = self.format_last_updated(self._last_updated)
         self.body = body or UndoableBuffer()
+        self.body_preview = self.get_body_preview()
 
-    def format_last_updated(self) -> str:
-        now = datetime.now()
-        midnight = datetime.combine(now, datetime.min.time())
+    # Properties
 
-        if self._last_updated > midnight:
-            return self._last_updated.strftime('%H:%M')
+    @GObject.Property(type=str)
+    def last_updated_formatted(self) -> str:
+        return self._last_updated_fmt
 
-        if self._last_updated.year < now.year:
-            return str(self._last_updated.year)
+    @last_updated_formatted.setter
+    def set_updated_formatted(self, luf: str):
+        self._last_updated_fmt = luf
 
-        return self._last_updated.strftime('%h %d')
+    @GObject.Property(type=float)
+    def last_updated(self):
+        return self._last_updated
+
+    @last_updated.setter
+    def set_last_updated(self, lu: float):
+        self._last_updated = lu
+        self.last_updated_formatted = self.format_last_updated(lu)
 
     @GObject.Property(type=str)
     def title(self):
@@ -76,24 +86,6 @@ class Note(GObject.Object):
     def set_pinned(self, pinned: bool):
         self._pinned = pinned
 
-    @GObject.Property(type=str)
-    def last_updated(self):
-        return self.format_last_updated()
-
-    @GObject.Property(type=str)
-    def last_updated_fmt(self):
-        return self.format_last_updated()
-
-    # @GObject.Property(type=datetime)
-    @property
-    def last_updated(self):
-        return self._last_updated
-
-    # @last_updated.setter
-    @last_updated_fmt.setter
-    def last_updated(self, lu: datetime):
-        self._last_updated = lu
-
     @GObject.Property(type=bool, default=False)
     def trash(self):
         return self._trash
@@ -110,8 +102,37 @@ class Note(GObject.Object):
     def set_notebook(self, nb: 'NoteBook'):
         self._notebook = nb
 
+    @GObject.Property(type=str)
+    def body_preview(self) -> str:
+        return self._body_preview
+
+    @body_preview.setter
+    def set_body_preview(self, preview: str):
+        self._body_preview = preview
+
     def __str__(self):
         return f'Note(id={self.pk}, title={self._title})'
 
     def __repr__(self):
         return str(self)
+
+    def get_body_preview(self) -> str:
+        start: Gtk.TextIter = self.body.get_start_iter()
+        end = start.copy()
+        end.forward_chars(200)
+        return self.body.get_text(start, end, False)
+
+    @staticmethod
+    def format_last_updated(last_updated: float) -> str:
+        now = datetime.now()
+        midnight = datetime.combine(now, datetime.min.time())
+
+        lud = datetime.fromtimestamp(last_updated)
+
+        if lud > midnight:
+            return lud.strftime('%H:%M')
+
+        if lud.year < now.year:
+            return str(lud.year)
+
+        return lud.strftime('%h %d')

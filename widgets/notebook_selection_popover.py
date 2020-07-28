@@ -43,8 +43,7 @@ class NotebookSelectionPopover(Gtk.PopoverMenu):
 
     @Gtk.Template.Callback('on_edit_notebooks_button_clicked')
     def _on_edit_notebooks_button_clicked(self, btn):
-        diag = EditNotebooksDialog(self.application_state)
-        diag.set_transient_for(self.get_parent())
+        diag = EditNotebooksDialog(self.application_state, transient_for=self.get_toplevel())
         diag.show()
 
     @Gtk.Template.Callback('on_notebooks_list_row_activated')

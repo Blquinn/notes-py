@@ -16,7 +16,6 @@ log = logging.getLogger(__name__)
 # TODO: Split into multiple widgets
 # Note: We can keep state by keeping the text buffers in memory and swapping the active buffer
 # https://python-gtk-3-tutorial.readthedocs.io/en/latest/textview.html
-# TODO: Periodically update last_updated time
 
 
 @Gtk.Template.from_file('ui/MainWindow.ui')
@@ -56,7 +55,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self.add_note_button.connect('clicked', self._on_add_notebook_button_pressed)
 
         self.preferences_button = Gtk.MenuButton()
-        self.preferences_button.add(Gtk.Image().new_from_icon_name('view-list-text-symbolic', Gtk.IconSize.BUTTON))
+        self.preferences_button.add(Gtk.Image().new_from_icon_name('format-justify-fill-symbolic', Gtk.IconSize.BUTTON))
         self.header_side.pack_end(self.preferences_button)
         
         self.application_preferences_popover = ApplicationPreferencesPopover()
@@ -85,9 +84,4 @@ class MainWindow(Gtk.ApplicationWindow):
 
     def _on_add_notebook_button_pressed(self, btn):
         """Add a new blank note to the current notebook."""
-        nb: NoteBook = self.application_state.active_notebook
-        # TODO: Save to db
-        # TODO: Prepend to beginning of non-pinned notes
-        note = Note('', nb)
-        self.application_state.notes.append(note)
-        self.application_state.active_note = note
+        self.application_state.add_new_note()

@@ -5,6 +5,7 @@ import threading
 from concurrent.futures.thread import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
+from time import time
 from typing import List, Tuple, Any
 
 from config import DATA_DIR
@@ -84,6 +85,27 @@ class NoteBookDao(DaoBase):
 
         return DB_EXECUTOR.submit(fn)
 
+    def delete(self, notebook: NoteBook):
+        def fn():
+            with self.db:
+                res = self.db.execute("""
+                update notes set is_in_trash = true
+                where notebook_id = ?
+                """, (notebook.pk,))
+
+                log.info('Moved %d notes to trash.', res.rowcount)
+
+                res = self.db.execute("""
+                delete from notebooks where id = ?
+                """, (notebook.pk,))
+
+                if res.rowcount:
+                    log.info('Deleted notebooks %s.', notebook)
+                else:
+                    log.error("Didn't find notebook %s to delete.", notebook)
+
+        return DB_EXECUTOR.submit(fn)
+
     def _find_all(self):
         with self.db:
             rows = self.db.execute(""" select id, "name" from notebooks """).fetchall()
@@ -102,18 +124,21 @@ class NoteDao(DaoBase):
     def read_note_row(row: Tuple[Any]) -> Note:
         buf = UndoableBuffer()
         fmt = buf.register_deserialize_tagset()
-        notebook = NoteBook(name=row[6], pk=row[5])
+        notebook = None
+        if row[6]:
+            notebook = NoteBook(name=row[6], pk=row[5])
+
         buf.deserialize(buf, fmt, buf.get_start_iter(), row[2])
         return Note(pk=row[0], title=row[1], body=buf, notebook=notebook,
                     pinned=bool(row[4]), trash=bool(row[3]),
-                    last_updated=datetime.fromtimestamp(row[7]))
+                    last_updated=float(row[7]))
 
     def _get_all_notes(self) -> List[Note]:
         rows = self.db.execute("""
         select n.id, n.title, n.note_contents, n.is_in_trash, n.is_pinned, nb.id, 
             nb.name, n.last_updated
         from notes n
-        inner join notebooks nb on n.notebook_id = nb.id
+        left outer join notebooks nb on n.notebook_id = nb.id
         order by n.is_pinned desc, n.last_updated desc
         """).fetchall()
         return [self.read_note_row(r) for r in rows]
@@ -134,30 +159,41 @@ class NoteDao(DaoBase):
         return DB_EXECUTOR.submit(fn)
 
     def save(self, note: Note):
+        note.body_preview = note.get_body_preview()
+
         def fn() -> Note:
-            fmt = note.body.register_serialize_tagset()
-            start, end = note.body.get_bounds()
-            buf_bytes = note.body.serialize(note.body, fmt, start, end)
+            log.debug('Saving note %s', note)
+            try:
+                fmt = note.body.register_serialize_tagset()
+                start, end = note.body.get_bounds()
+                buf_bytes = note.body.serialize(note.body, fmt, start, end)
 
-            notebook_pk = None
-            if note.notebook:
-                notebook_pk = note.notebook.pk
+                notebook_pk = note.notebook.pk if note.notebook else None
 
-            with self.db:
-                if note.pk:  # Update
-                    self.db.execute("""
-                    update notes 
-                    set notebook_id = ?, title = ?, note_contents = ?, is_in_trash = ?, 
-                        is_pinned = ?, last_updated = strftime('%s', 'now')
-                    where id = ? 
-                    """, (notebook_pk, note.title, buf_bytes, note.trash, note.pinned, note.pk))
+                with self.db:
+                    now = time()
+                    note.last_updated = now
+                    now_unix = int(now)
+
+                    if note.pk:  # Update
+                        self.db.execute("""
+                        update notes 
+                        set notebook_id = ?, title = ?, note_contents = ?, is_in_trash = ?, 
+                            is_pinned = ?, last_updated = ?
+                        where id = ? 
+                        """, (notebook_pk, note._title, buf_bytes, note.trash, note.pinned, now_unix, note.pk))
+                        return note
+
+                    res = self.db.execute("""
+                    insert into notes (notebook_id, title, note_contents, is_in_trash, is_pinned, last_updated)
+                    values (?, ?, ?, ?, ?, ?)
+                    """, (notebook_pk, note._title, buf_bytes, note.trash, note.pinned, now_unix))
+
+                    note.pk = res.lastrowid
+                    log.debug('Saved note %s', note)
                     return note
-
-                self.db.execute("""
-                insert into notes (notebook_id, title, note_contents, is_in_trash, is_pinned, last_updated)
-                values (?, ?, ?, ?, ?, strftime('%s', 'now'))
-                """, (notebook_pk, note.title, buf_bytes, note.trash, note.pinned))
-
-                return note
+            except Exception as e:
+                log.error('Failed to store note %s: %s', note, e)
+                raise e
 
         return DB_EXECUTOR.submit(fn)

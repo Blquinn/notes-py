@@ -25,6 +25,14 @@ class NoteActionsPopover(Gtk.PopoverMenu):
     @Gtk.Template.Callback('on_move_to_button_clicked')
     def _on_move_to_button_clicked(self, btn):
         note = self.note if self.note else self.application_state.active_note
-        diag = MoveNoteDialog(self.main_window, note, self.application_state)
-        diag.set_transient_for(self.main_window)
+        diag = MoveNoteDialog(self.main_window, note, self.application_state,
+                              transient_for=self.get_toplevel())
         diag.show_all()
+
+    @Gtk.Template.Callback('on_pin_button_clicked')
+    def _on_pin_button_clicked(self, btn, *args):
+        is_pinned = not self.note.pinned
+        self.note.pinned = is_pinned
+        log.debug('Setting note %s pinned to %s', self.note, is_pinned)
+        self.application_state.update_note(self.note)
+        self.application_state.note_pinned.emit()
