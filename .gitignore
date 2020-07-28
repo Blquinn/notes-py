@@ -1,2 +1,3 @@
 *.ui#
 .idea/
+**/__pycache__
