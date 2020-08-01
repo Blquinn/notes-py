@@ -73,22 +73,32 @@ class MainWindow(Gtk.ApplicationWindow):
         self.preferences_button.add(Gtk.Image().new_from_icon_name('format-justify-fill-symbolic', Gtk.IconSize.BUTTON))
         self.header_side.pack_end(self.preferences_button)
         
-        self.application_preferences_popover = ApplicationPreferencesPopover()
+        self.application_preferences_popover = ApplicationPreferencesPopover(self)
         self.preferences_button.set_popover(self.application_preferences_popover)
        
         self.notebook_selection_popover = NotebookSelectionPopover(self.application_state)
         self.note_selection_button.set_popover(self.notebook_selection_popover)
 
         self.application_state.connect('notify::active-notebook', self._on_active_notebook_changed)
+        self.application_state.connect('notify::active-note', self._on_active_note_changed)
+        self.application_state.connect('notify::show-trash', self._on_show_trash_changed)
 
         self.application_state.initialize_state()
 
     def _on_active_notebook_changed(self, *args):
+        self.application_state.show_trash = False
         nb: NoteBook = self.application_state.active_notebook
         notebook_name = nb.name if nb else 'All Notebooks'
         self.note_selection_button_label.set_text(notebook_name)
         if nb:
             nb.connect('notify::name', self._on_active_notebook_name_changed)
+
+    def _on_active_note_changed(self, *args):
+        self.editor_options_popover.set_note(self.application_state.active_note)
+
+    def _on_show_trash_changed(self, *args):
+        if self.application_state.show_trash:
+            self.note_selection_button_label.set_text('Trash')
 
     def _on_active_notebook_name_changed(self, nb: NoteBook, *args):
         self.note_selection_button_label.set_text(nb.name)

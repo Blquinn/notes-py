@@ -15,17 +15,7 @@
 # License along with this program; if not, see <http://www.gnu.org/licenses/>.
 from gi.repository import Gtk
 
-from widgets.about_dialog import AboutDialog
 
-
-@Gtk.Template.from_file('ui/ApplicationPreferencesPopover.ui')
-class ApplicationPreferencesPopover(Gtk.PopoverMenu):
-    __gtype_name__ = 'ApplicationPreferencesPopover'
-
-    def __init__(self, main_window):
-        super(ApplicationPreferencesPopover, self).__init__()
-        self.main_window = main_window
-       
-    @Gtk.Template.Callback('on_about_button_clicked') 
-    def _on_about_button_clicked(self, btn):
-        AboutDialog(transient_for=self.main_window.get_toplevel()).show()
+@Gtk.Template.from_file('ui/AboutDialog.ui')
+class AboutDialog(Gtk.AboutDialog):
+    __gtype_name__ = 'AboutDialog'

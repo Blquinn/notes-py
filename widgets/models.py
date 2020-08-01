@@ -28,7 +28,7 @@ log = logging.getLogger(__name__)
 class ApplicationState(GObject.Object):
     __gtype_name__ = "ApplicationState"
 
-    note_pinned = GObject.Signal()
+    note_changed = GObject.Signal()
 
     def __init__(self):
         super(ApplicationState, self).__init__()
@@ -43,6 +43,8 @@ class ApplicationState(GObject.Object):
 
         self._active_note: Union[Note, None] = None
         self._active_notebook: Union[NoteBook, None] = None
+
+        self._show_trash = False
 
     # Properties
 
@@ -69,6 +71,14 @@ class ApplicationState(GObject.Object):
     @initializing_state.setter
     def set_initializing_state(self, initializing: bool):
         self._initializing_state = initializing
+
+    @GObject.Property(type=bool, default=False)
+    def show_trash(self) -> bool:
+        return self._show_trash
+
+    @show_trash.setter
+    def set_show_trash(self, show: bool):
+        self._show_trash = show
 
     # Methods
 
@@ -102,6 +112,7 @@ class ApplicationState(GObject.Object):
     # TODO: Fix header section bug
     def add_new_note(self):
         note = Note('', self.active_notebook)
+        note.body.connect('changed', debounce(500)(self._on_note_body_changed), note)
 
         # Insert as first non-pinned note in notebook
         self.notes.insert_sorted(note, lambda a, b: int(not a.pinned))
@@ -132,6 +143,7 @@ class ApplicationState(GObject.Object):
     def move_note_to_trash(self, note: Note):
         note.trash = True
         self._note_dao.save(note)
+        self.note_changed.emit()
 
     def delete_notebook(self, notebook: NoteBook):
         log.info('Deleting notebook %s', notebook)

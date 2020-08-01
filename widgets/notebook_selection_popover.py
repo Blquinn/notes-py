@@ -13,13 +13,15 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this program; if not, see <http://www.gnu.org/licenses/>.
-from typing import List
+import logging
 
-from gi.repository import Gtk, Pango, GObject
+from gi.repository import Gtk, Pango
 
 from widgets.edit_notebooks_dialog import EditNotebooksDialog
 from widgets.models import ApplicationState
 from models.models import NoteBook
+
+log = logging.getLogger(__name__)
 
 
 @Gtk.Template.from_file('ui/NotebookSelectionPopover.ui')
@@ -27,6 +29,7 @@ class NotebookSelectionPopover(Gtk.PopoverMenu):
     __gtype_name__ = 'NotebookSelectionPopover'
 
     notebooks_list: Gtk.ListBox = Gtk.Template.Child()
+    all_notebooks_button: Gtk.Button = Gtk.Template.Child()
 
     def __init__(self, state: ApplicationState):
         super(NotebookSelectionPopover, self).__init__()
@@ -63,12 +66,22 @@ class NotebookSelectionPopover(Gtk.PopoverMenu):
 
     @Gtk.Template.Callback('on_notebooks_list_row_activated')
     def _on_notebooks_list_row_activated(self, list_box, row: Gtk.ListBoxRow):
+        self.application_state.show_trash = False
         nb = self.application_state.notebooks[row.get_index()]
         self.application_state.active_notebook = nb
     
     @Gtk.Template.Callback('on_all_notebooks_button_clicked') 
     def _on_all_notebooks_button_clicked(self, btn):
+        self.application_state.show_trash = False
         self.application_state.active_notebook = None
+        self.notebooks_list.unselect_all()
+
+    @Gtk.Template.Callback('on_show_trash_button_clicked')
+    def _on_show_trash_button_clicked(self, btn, *args):
+        log.debug('Show trash pressed.')
+
+        self.application_state.active_notebook = None
+        self.application_state.show_trash = True
         self.notebooks_list.unselect_all()
 
 

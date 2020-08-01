@@ -28,7 +28,8 @@ log = logging.getLogger(__name__)
 class NoteActionsPopover(Gtk.PopoverMenu):
     __gtype_name__ = 'NoteActionsPopover'
 
-    open_in_window_button = Gtk.Template.Child()
+    open_in_window_button: Gtk.Button = Gtk.Template.Child()
+    move_to_trash_button: Gtk.Button = Gtk.Template.Child()
 
     def __init__(self, main_window, state: ApplicationState, note: Note = None):
         super(NoteActionsPopover, self).__init__()
@@ -36,6 +37,18 @@ class NoteActionsPopover(Gtk.PopoverMenu):
         self.main_window = main_window
         self.note = note
         self.application_state = state
+        self.set_note(note)
+
+    def set_note(self, note: Note):
+        self.note = note
+        if not note:
+            return
+
+        if note.trash:
+            self.move_to_trash_button.set_label('Remove From Trash')
+        else:
+            self.move_to_trash_button.set_label('Move to Trash')
+        self.move_to_trash_button.set_halign(Gtk.Align.START)
 
     @Gtk.Template.Callback('on_move_to_button_clicked')
     def _on_move_to_button_clicked(self, btn):
@@ -50,4 +63,10 @@ class NoteActionsPopover(Gtk.PopoverMenu):
         self.note.pinned = is_pinned
         log.debug('Setting note %s pinned to %s', self.note, is_pinned)
         self.application_state.update_note(self.note)
-        self.application_state.note_pinned.emit()
+        self.application_state.note_changed.emit()
+        
+    @Gtk.Template.Callback('on_move_to_trash_button_clicked')
+    def _on_move_to_trash_button_clicked(self, btn):
+        self.note.trash = not self.note.trash
+        self.application_state.update_note(self.note)
+        self.application_state.note_changed.emit()

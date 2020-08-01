@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Generated with glade 3.36.0 -->
+<!--
+Copyright (c) 2020, Benjamin Quinn <benlquinn@gmail.com>
+
+This program is free software; you can redistribute it and/or
+modify it under the terms of the GNU Lesser General Public
+License as published by the Free Software Foundation; either
+version 2.1 of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+Lesser General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public
+License along with this program; if not, see <http://www.gnu.org/licenses/>.
+-->
+<interface>
+  <requires lib="gtk+" version="3.22"/>
+  <template class="AboutDialog" parent="GtkAboutDialog">
+    <property name="can_focus">False</property>
+    <property name="type_hint">dialog</property>
+    <property name="program_name">Notes</property>
+    <property name="version">0.0.1</property>
+    <property name="copyright" translatable="yes">Copyright (c) 2020 Benjamin Quinn &lt;benlquinn@gmail.com&gt;</property>
+    <property name="comments" translatable="yes">Simple notebook for GNOME</property>
+    <property name="authors">Benjamin Quinn &lt;benlquinn@gmail.com&gt;</property>
+    <property name="logo_icon_name">image-missing</property>
+    <property name="license_type">lgpl-2-1</property>
+    <child internal-child="vbox">
+      <object class="GtkBox">
+        <property name="can_focus">False</property>
+        <property name="orientation">vertical</property>
+        <property name="spacing">2</property>
+        <child internal-child="action_area">
+          <object class="GtkButtonBox">
+            <property name="can_focus">False</property>
+            <property name="layout_style">end</property>
+            <child>
+              <placeholder/>
+            </child>
+            <child>
+              <placeholder/>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">False</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+        <child>
+          <placeholder/>
+        </child>
+      </object>
+    </child>
+    <child type="titlebar">
+      <placeholder/>
+    </child>
+  </template>
+</interface>

@@ -50,7 +50,11 @@ class NoteList(Gtk.Box):
         self.application_state.connect('notify::initializing-state', self._on_notes_loaded)
         self.application_state.connect('notify::active-note', self._on_active_note_changed)
         self.application_state.connect('notify::active-notebook', self._on_active_notebook_changed)
-        self.application_state.note_pinned.connect(self._on_note_pinned)
+        self.application_state.connect('notify::show-trash', self._on_show_trash_changed)
+        self.application_state.note_changed.connect(self._on_note_changed)
+
+    def _on_show_trash_changed(self, *args):
+        self.notes_listbox.invalidate_filter()
 
     def _sort_notes(self, a_row: Note, b_row: Note):
         """ Sorts the current view of the notes. Sorts on pinned, then last_updated. """
@@ -61,7 +65,8 @@ class NoteList(Gtk.Box):
             comp = int(b.last_updated > a.last_updated)
         return comp
 
-    def _on_note_pinned(self, state):
+    def _on_note_changed(self, state):
+        self.notes_listbox.invalidate_filter()
         self.notes_listbox.invalidate_sort()
         self.notes_listbox.invalidate_headers()
 
@@ -100,9 +105,12 @@ class NoteList(Gtk.Box):
         """
         note: Note = row.get_child().note
 
-        # TODO: Search body?
+        # TODO: Search body
         if self.search_filter and self.search_filter.lower() not in note.title.lower():
             return False
+
+        if self.application_state.show_trash:
+            return note.trash
 
         if note.trash:
             return False
@@ -117,7 +125,7 @@ class NoteList(Gtk.Box):
     def _on_notes_loaded(self, *args):
         log.debug('Notes loaded')
         if self.application_state.notes:
-            self.notes_listbox.get_row_at_index(0).activate()
+            self.application_state.active_note = self.notes_listbox.get_row_at_index(0).get_child().note
 
     def _on_active_notebook_changed(self, state, *args):
         """Re-filter notes list when active notebook is changed."""
